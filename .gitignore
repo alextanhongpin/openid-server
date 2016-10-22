@@ -1,2 +1,5 @@
 .env
+
+#Folders
 node_modules
+test
