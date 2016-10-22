@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Consent</title>
+</head>
+<body>
+
+	<% if (application_name) { %>
+		<h1><%= application_name %> is requesting access to the following scopes</h1>
+	<% } %>
+	<% for (var i = 0; i < scope.length; i += 1) { %>
+		<li><%= scope[i] %></li>
+	<% } %>
+
+	<button id='allow'>Allow</button>
+	<button id='deny'>Deny</button>
+
+
+	<script type="text/javascript">
+	(function () {
+
+		const error = '<%- error %>';
+	
+		if (error) {
+			alert(error);
+		}
+		
+		const allow = document.getElementById('allow');
+
+			const accessToken = window.localStorage.access_token;
+			const refreshToken = window.localStorage.refresh_token;
+		allow.addEventListener('click', () => {
+			// post to oauth/authorize
+			fetch('/oauth/authorize', {
+				method: 'POST',
+				headers: {
+	     			'Authorization': 'Authorization ' + accessToken, 
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					token: '<%- token %>'
+				})
+			}).then(function(response) {
+				return response.json()
+			}).then(function(response) {
+				console.log(response)
+				window.location.href = response.redirect_url;
+			}).catch(function(err) {
+				// Error :(
+			});
+		}, false);
+
+		const deny = document.getElementById('deny');
+
+		deny.addEventListener('click', () => {
+			window.location.href = document.referrer;
+			// go back to original url e.g. document.referrer
+		}, false);
+		
+	})()
+	</script>
+</body>
+</html>

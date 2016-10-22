@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Client</title>
+</head>
+<body>
+
+
+	<form action="/register" method="POST">
+		<h1>Register your account</h1>
+
+		<div>
+			<p><label>Email</label></p>
+			<p><input type="email" name="email" placeholder='Enter your email' value='john.doe@mail.com'></p>
+		</div>
+		<div>
+			<p><label>Password</label></p>
+			<p><input type="password" name="password" placeholder='Enter your password' value='123456'></p>
+		</div>
+
+		<button id='create'>Register</button>
+	</form>
+	<script type="text/javascript">
+
+		'use strict';
+
+
+		function isAuthenticated() {
+			// check localstorage for tokens first
+			const accessToken = window.localStorage.access_token;
+			const refreshToken = window.localStorage.refresh_token;
+
+			validateToken(accessToken, refreshToken).then((data) => {
+				console.log(data);
+				if (data.success) {
+
+					const referrer = '<%- referrer%>';
+					
+					if (referrer != null && referrer != undefined) {
+						window.location.href = referrer;
+					} else {
+						window.location.href = '/home';
+					}
+				}
+			})
+
+
+		}
+
+		function validateToken(accessToken, refreshToken) {
+			return fetch('/tokens/validate', {
+				method: 'POST',
+				headers: {
+	 				'Authorization': 'Authorization ' + accessToken, 
+	 				'Content-Type': 'application/x-www-form-urlencoded'
+					//'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					refreshToken: refreshToken
+				})
+			}).then(function(response) {
+				return response.json()
+			}).catch(function(err) {
+				// Error :(
+			});
+		}
+
+		isAuthenticated()
+
+
+		const create = document.getElementById('create');
+
+		create.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			// post to oauth/authorize
+			fetch('/register', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					email: document.querySelector('input[name=email]').value,
+					password: document.querySelector('input[name=password]').value,
+					referrer: '<%- referrer%>'
+				})
+			}).then(function(response) {
+				return response.json()
+			}).then(function(response) {
+					console.log(response)
+
+				if (response && response.success) {
+
+					const { access_token, refresh_token } = response.results;
+					window.localStorage.access_token = access_token;
+					window.localStorage.refresh_token = refresh_token;
+
+					if (response.redirect) {
+						window.location.href = response.redirect_url;
+					} else {
+						window.location.href = '/';
+					}
+				}
+				
+			}).catch(function(err) {
+				// Error :(
+			});
+		}, false);
+
+	</script>
+</body>
+</html>

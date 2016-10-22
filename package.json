@@ -1,0 +1,31 @@
+{
+  "name": "openid-connect",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --ui bdd --reporter spec --timeout 5000 --recursive --watch",
+    "start": "nf start"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
+    "bluebird": "^3.4.6",
+    "body-parser": "^1.15.2",
+    "cookie": "^0.3.1",
+    "cookie-parser": "^1.4.3",
+    "ejs": "^2.5.2",
+    "express": "^4.14.0",
+    "http-status-codes": "^1.0.6",
+    "jsonwebtoken": "^7.1.9",
+    "mocha": "^3.1.2",
+    "mongoose": "^4.6.4",
+    "nodemon": "^1.11.0",
+    "useragent": "^2.1.9"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "sinon": "^1.17.6"
+  }
+}

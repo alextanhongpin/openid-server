@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Home</title>
+
+	<style type="text/css">
+		
+		body {
+			display: none;
+		}
+	</style>
+</head>
+<body>
+
+
+	<h1>You are logged in the following devices</h1>
+
+
+	<table id='output'></table>
+
+	<script type="text/javascript">
+
+		'use strict';
+
+
+		(function() {
+			const accessToken = window.localStorage.access_token;
+			const refreshToken = window.localStorage.refresh_token;
+
+			if (accessToken && refreshToken) {
+
+				// validate access token first
+
+
+				validateToken(accessToken, refreshToken);
+				// const isValid = true;
+				// const isExpired = false;
+				// if (isValid) {
+				// } else if (isExpired) {
+
+				// } else {
+				// 	window.location.href = '/register';
+				// }
+				// ifExist
+
+				// else
+				document.body.style.display = 'block';
+			} else {
+				window.location.href = '/register';
+			}
+
+			function validateToken(accessToken, refreshToken) {
+				return fetch('/tokens/validate', {
+					method: 'POST',
+					headers: {
+	     				'Authorization': 'Authorization ' + accessToken, 
+	     				'Content-Type': 'application/x-www-form-urlencoded'
+						//'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						refreshToken: refreshToken
+					})
+				}).then(function(response) {
+					console.log(response)
+					return response.json()
+				}).then(function(response) {
+					console.log(response)
+					//window.location.href = response.redirect_url;
+				}).catch(function(err) {
+					console.log(err.toString());
+					// Error :(
+				});
+			}
+
+
+			function fetchTokens(accessToken) {
+				return fetch('/tokens', {
+					method: 'get',
+					headers: {
+	     				'Authorization': 'Authorization ' + accessToken
+					},
+
+				}).then(function(response) {
+					return response.json()
+				}).catch(function(err) {
+					// Error :(
+				});
+			}
+
+			fetchTokens(accessToken)
+			.then((results) => {
+				console.log(results)
+				if (!results) return;
+
+				const output = document.getElementById('output');
+				output.innerHTML += `
+					<tr>
+						<td>OS</td>
+						<td>Browser</td>
+						<td>Created At</td>
+						<td>Updated At</td>
+						<td>Access Token</td>
+						<td>Refresh Token</td>
+						<td>Actions</td>
+					</tr>
+				`
+				results.results.map((model) => {
+					output.innerHTML += `
+						<tr>
+							<td>${ model.os }</td>
+							<td>${ model.browser }</td>
+							<td>${ model.created_at }</td>
+							<td>${ model.updated_at }</td>
+							<td>${ model.access_token.substring(0, 20) + '...' }</td>
+							<td>${ model.refresh_token.substring(0, 20)  + '...'}</td>
+							<td>
+								<button>Delete</button>
+							</td>
+						</tr>
+					`
+				})
+			}).catch((err) => {
+				console.log(err)
+			})
+
+		})()
+		
+	</script>
+</body>
+</html>

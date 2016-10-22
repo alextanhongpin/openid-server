@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Client</title>
+</head>
+<body>
+
+
+	<h1>Create New API Client</h1>
+
+	<div>
+		<p><label>Redirect URL</label></p>
+		<p><input type="text" name="redirect_url" placeholder='redirect_url'></p>
+	</div>
+	<div>
+		<p><label>Auth URL</label></p>
+		<p><input type="text" name="auth_url" placeholder='auth_url'></p>
+	</div>
+	<div>
+		<p><label>Domain URL</label></p>
+		<p><input type="text" name="domain_url" placeholder='domain_url'></p>
+	</div>
+	<div>
+		<p><label>Application Name</label></p>
+		<p><input type="text" name="application_name" placeholder='application_name'></p>
+	</div>
+	<div>
+		<p><label>Application Category</label></p>
+		<p><input type="text" name="application_category" placeholder='application_category'></p>
+	</div>
+
+	<button id='create'>Create New Client</button>
+
+	<div id='output'></div>
+
+	<script type="text/javascript">
+		
+
+	function getInputValue(name) {
+		return document.querySelector(`input[name="${name}"]`).value;
+	}
+
+	function get() {
+		const payload = JSON.stringify({
+			redirect_url: getInputValue('redirect_url'),
+			auth_url: getInputValue('auth_url'),
+			domain_url: getInputValue('domain_url'),
+			application_name: getInputValue('application_name'),
+			application_category: getInputValue('application_category')
+		});
+		// post to oauth/authorize
+		fetch('/api/clients', {
+			method: 'post',
+		    headers: {
+		      'Content-Type': 'application/json'
+		      //'Content-Type': 'multipart/form-data'
+		      // x-www-form-urlencoded
+		    },
+			body: payload
+		}).then(function(response) {
+			return response.json()
+		}).then(function(response) {
+			console.log(response)
+			//window.location.href = response.redirect_url;
+		}).catch(function(err) {
+			// Error :(
+		});
+	}
+
+	function remove(id) {
+		fetch(`/api/clients/${ id }`, {
+			method: 'delete',
+		}).then(function(response) {
+			return response.json();
+		}).then(function(response) {
+
+			document.querySelector(`js-list-wrapper-${id}`).removeChild()
+
+		}).catch(function(err) {
+
+		})
+	}
+
+		const create = document.getElementById('create');
+		create.addEventListener('click', () => {
+			get();
+		}, false);
+
+
+		function setOutput(el) {
+			const output = document.getElementById(el);
+
+			fetch('/api/clients', {
+				method: 'get',
+			}).then(function(response) {
+				return response.json()
+			}).then(function(response) {
+
+				const collection = response.results;
+				collection.map((model) => {
+
+					output.innerHTML += `
+						<div class='js-list-wrapper-${model._id}'>
+							<p><b>${ model.application_name }</b></p>
+							<p>Callback URL: ${ model.redirect_url }</p>
+							<p>Client ID: ${ model.client_id }</p>
+							<p>Client Secret ${ model.client_secret }</p>
+
+							<button id=${ model._id }>Delete</button>
+						</div>
+
+					`
+				});
+
+				//window.location.href = response.redirect_url;
+			}).catch(function(err) {
+				// Error :(
+			});
+		}
+
+		setOutput('output');
+
+		document.addEventListener('click', (evt) => {
+
+			const tagName = evt.target.nodeName || evt.target.tagName;
+			const isButton = tagName.toLowerCase() === 'button';
+			const hasId = evt.target.id != null && evt.target.id != undefined;
+			if (isButton && hasId) {
+
+				const confirmation = window.confirm('Do you want to delete this permanently?');
+				if (confirmation) remove(evt.target.id.trim());
+			}
+		}, false);
+	</script>
+</body>
+</html>
