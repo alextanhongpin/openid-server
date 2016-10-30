@@ -4,11 +4,14 @@
 
 // Modules
 const HttpStatus = require('http-status-codes');
-const querystring = require('querystring');
+
+// Models
+const AuthorizationCode = require('../model/code.js');
 
 // Middlewares
 const asyncWrapper = require('../middleware/async-wrapper.js');
 const AuthorizationCodeGrantFlow = require('../middleware/oauth2.js').AuthorizationCodeGrantFlow;
+const Errors = require('../middleware/error-message.js');
 const HeaderCredentials = require('../middleware/header-credentials.js');
 const jwtToken = require('../middleware/jwt.js');
 const jwtTokenOpenId = require('../middleware/jwt-openid.js');
@@ -16,24 +19,26 @@ const rurl = require('../middleware/rurl.js');
 
 // Validators
 const HeaderAuth = require('../validator/header-auth.js');
-const ContentType = require('../validator/content-type.js');
-const GrantType = require('../validator/grant-type.js');
+
+
 
 const authorizeRequest = {
 	method: 'get',
-	route: '/oauth2/authorize',
-	command: [
+	url: '/oauth2/authorize',
+	handler: [
+		// Requires the bearer token for refresh
+		HeaderCredentials.include,
 		// store the clients in the res.locals.client
 		asyncWrapper(AuthorizationCodeGrantFlow.authorize),
 
 		function renderPage(req, res, next) {
 
-			console.log('Render ConsentPage')
-			// console.log(res.locals.client)
+
 			const client = res.locals.client;
-			// // successful, render the consent view
 			res.locals.application_name = client && client.application_name;
 			res.locals.scope = client.scope || [];
+			res.locals.redirect_url = req.query.redirect_uri;
+
 			// Unfortunately, there is no way to access the client data securely from client side
 			// Encrypt it and resend it to the server side
 			// Set expiration date to 5min max
@@ -47,8 +52,8 @@ const authorizeRequest = {
 
 const authorizeResponse = {
 	method: 'post',
-	route: '/oauth2/authorize',
-	command: [
+	url: '/oauth2/authorize',
+	handler: [
 		// Must be bearer
 		HeaderAuth.bearer,
 		// Store the extracted access token as res.locals.encoded_credentials
@@ -60,10 +65,11 @@ const authorizeResponse = {
 
 			if (!client) {
 				res.status(HttpStatus.BAD_REQUEST).json({
-					error: 'Invalid client',
-					error_description: 'This client is not authorized'
+					error: Errors.UNAUTHORIZED_CLIENT,
+					error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
 				});
 			}
+
 			jwtToken.verify(client).then((data) => {
 				res.locals.decoded_client = data;
 				// Also grab the `user_id` from the current token to 
@@ -78,13 +84,14 @@ const authorizeResponse = {
 		},
 		// store the clients in the res.locals.client
 		asyncWrapper(AuthorizationCodeGrantFlow.authorize),
+
 		function response(req, res, next) {
 			const isAuthorized = req.body.isAuthorized;
 			// Success!
 			// redirect_uri?code=code&state=state
 			// create authorization code that expires in 5-10 minutes
 			jwtToken.sign({
-				user_agent: req.headers['user-agent'],
+				useragent: req.headers['user-agent'],
 				user_id: res.locals.user_id
 			}, '5m').then((code) => {
 
@@ -92,16 +99,22 @@ const authorizeResponse = {
 				const redirectUri = client.redirect_uri;
 				const state = client.state;
 				
-
-				
-				if (isAuthorized) {
-
-					const redirect_url = rurl.construct(redirectUri, { code, state })
-					res.status(HttpStatus.OK).json({ redirect_url });
-				} else {
-					const redirect_url = rurl.construct(redirectUri, { error: 'access_denied' })
-					res.status(HttpStatus.OK).json({ redirect_url });
-				}
+				// Should store the token here
+				return AuthorizationCode.create({
+					code: code
+				}).then((data) => {
+	
+					if (isAuthorized) {
+						const redirect_url = rurl.construct(redirectUri, { code, state })
+						return res.status(HttpStatus.OK).json({ redirect_url });
+					} else {
+						const redirect_url = rurl.construct(redirectUri, {
+							error: Errors.ACCESS_DENIED,
+							error_description: Errors.getErrorDescriptionFrom(Errors.ACCESS_DENIED)
+						})
+						return res.status(HttpStatus.OK).json({ redirect_url });
+					}
+				});
 			});
 
 
@@ -110,7 +123,8 @@ const authorizeResponse = {
 	]
 }
 
-module.exports = [
+module.exports = {
 	authorizeRequest,
 	authorizeResponse
-]
+}
+

@@ -28,4 +28,7 @@ function isForm(req, res, next) {
 }
 
 
-module.exports = { form:isForm, json:isJSON }
+module.exports = { 
+	form: isForm, 
+	json: isJSON 
+}

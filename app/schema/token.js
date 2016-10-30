@@ -17,7 +17,8 @@ const TokenSchema = new Schema({
 	},
 	created_at: {
 		type: Date,
-		default: Date.now
+		default: Date.now,
+		// expires: 300, // 1 min
 	},
 	updated_at: {
 		type: Date,
@@ -39,6 +40,10 @@ const TokenSchema = new Schema({
 	},
 });
 
+TokenSchema.pre('save', function(next) {
+  this.updated_at = Date.now();
+  next();
+});
 
 TokenSchema.methods.sign = function (payload, options) {
 	return jwtToken.sign2(payload, options);
@@ -46,19 +51,19 @@ TokenSchema.methods.sign = function (payload, options) {
 TokenSchema.methods.verify = function (token) {
 	return jwtToken.verify(token);
 }
-// TODO: Deprecate methods
-TokenSchema.methods.generateAccessToken = function (params) {
-	return jwtToken.sign2(params);
-}
+// // TODO: Deprecate methods
+// TokenSchema.methods.generateAccessToken = function (params) {
+// 	return jwtToken.sign2(params);
+// }
 
-TokenSchema.methods.validateAccessToken = function (params) {
-	return jwtToken.verify(this.access_token);
-}
-TokenSchema.methods.generateRefreshToken = function (params) {
-	return jwtToken.sign(params); 
-}
-TokenSchema.methods.validateRefreshToken = function (params) {
-	return jwtToken.verify(this.refresh_token);
-}
+// TokenSchema.methods.validateAccessToken = function (params) {
+// 	return jwtToken.verify(this.access_token);
+// }
+// TokenSchema.methods.generateRefreshToken = function (params) {
+// 	return jwtToken.sign(params); 
+// }
+// TokenSchema.methods.validateRefreshToken = function (params) {
+// 	return jwtToken.verify(this.refresh_token);
+// }
 
 module.exports = mongoose.model('Token', TokenSchema);

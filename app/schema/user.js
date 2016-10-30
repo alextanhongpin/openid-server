@@ -5,7 +5,6 @@ const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
 mongoose.Promise = require('bluebird');//global.Promise;
 
-const HttpStatus = require('http-status-codes');
 
 const UserSchema = new Schema({
 	version: {type: String, default: '0.0.1' },
@@ -66,8 +65,8 @@ const UserSchema = new Schema({
 
 
 	// Version 0.0.1
-	created_at: {type: Date, default: Date.now },
-	updated_at: {type: Date, default: Date.now },
+	//created_at: {type: Date, default: Date.now },
+	//updated_at: {type: Date, default: Date.now },
 	// Version 0.0.2
 	tagline: String,
 
@@ -83,6 +82,10 @@ const UserSchema = new Schema({
 	invited: { type: Boolean, default: false },
 
 }, {
+	timestamps: { 
+		createdAt: 'created_at', 
+		updatedAt: 'updated_at' 
+	},
 	toObject: {
 		virtuals: true
 	},

@@ -1,8 +1,8 @@
 
 
-const AccessTokenErrors = require('./error-message.js').AccessTokenErrors;
 
-const Errors = require('./error-message.js').AuthenticationErrors;
+
+const Errors = require('./error-message.js');
 
 const Client = require('../model/client.js');
 const ClientCredentials = require('./client-credentials.js');
@@ -32,7 +32,9 @@ function constructErrorUrl(res) {
 // ClientCredentialsGrant
 // ResourceOwnerPasswordCredentialsGrant
 const ACGF = {
-
+	responseType(req, res, next) {
+		
+	}
 }
 const ROPC = {
 
@@ -97,110 +99,6 @@ const AuthorizationCodeGrantFlow = {
 		next();
 	},
 
-	refresh: function* token(req, res, next) {
-		// #request RFC 6749
-		// const grantType = req.body.grant_type;
-		// contains the user agent as well as owner id
-		const code = req.body.code;
-		const redirectUri = req.body.redirect_uri;
-		// const contentType =	req.headers['content-type'];
-
-		// if (contentType !== 'application/x-www-form-urlencoded') {
-		// 	return next({
-		// 		error: 'Invalid Content-Type',
-		// 		error_description: 'Content-Type should be x-www-form-urlencoded instead of ' + contentType
-		// 	});
-		// }
-
-		// const authorization = req.headers['authorization'];
-
-		// if (authorization.indexOf('Basic') === -1) {
-		// 	return next({
-		// 		error: AccessTokenErrors.INVALID_CLIENT,
-		// 		error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_CLIENT)
-		// 	});
-		// } 
-		
-		//const encryptedClientCredentials = authorization.split(' ')[1];
-		//const { clientId, clientSecret } = yield ClientCredentials.decode(encryptedClientCredentials);
-		
-		// console.log('client_id', clientId)
-		// console.log('client_secret', clientSecret)
-		// if (!grantType) {
-		// 	return next({
-		// 		error: AccessTokenErrors.INVALID_GRANT,
-		// 		error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_GRANT)
-		// 	});
-		// }
-
-		// if (grantType !== 'authorization_code') {
-		// 	return next({
-		// 		error: AccessTokenErrors.UNSUPPORTED_GRANT_TYPE,
-		// 		error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.UNSUPPORTED_GRANT_TYPE)
-		// 	});
-		// }
-		//console.log('code', code)
-
-		if (!code) {
-			return next({
-				error: AccessTokenErrors.INVALID_REQUEST,
-				error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_REQUEST)
-			});
-		}
-		if (!redirectUri) {
-			// is valid url?
-
-			// url still needs to be validated to be equal the client redirect url
-			return next({
-				error: AccessTokenErrors.INVALID_REQUEST,
-				error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_REQUEST)
-			});
-		}
-		// if (!clientId) {
-		// 	return next({
-		// 		error: AccessTokenErrors.UNAUTHORIZED_CLIENT,
-		// 		error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.UNAUTHORIZED_CLIENT)
-		// 	});
-		// }
-
-		// query client database
-		// const client = yield Client.findSecret({
-		// 	clientId,
-		// 	clientSecret
-		// });
-		// console.log('client', client)
-
-		// if (!client) {
-		// 	return next({
-		// 		error: AccessTokenErrors.INVALID_CLIENT,
-		// 		error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_CLIENT)
-		// 	});
-		// }
-
-		//console.log('redirectUri', redirectUri)
-		//console.log('indexof', client.redirect_urls.indexOf(redirectUri))
-		const client = res.locals.client;
-		if (client.redirect_urls.indexOf(redirectUri) === -1) {
-			return next({
-				error: AccessTokenErrors.UNAUTHORIZED_CLIENT,
-				error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.UNAUTHORIZED_CLIENT)
-			});	
-		}
-		// grant_type=authorization_code
-		// code
-		// redirect_uri
-		// client_id
-		res.locals.client = client;
-		next();
-	},
-
-	permission() {
-		// Validate the route for calling the services
-		// Must be bearer type
-		// must have encodedCredentials
-		// must be a valid token
-		// 
-	}
 }
 
 module.exports = {

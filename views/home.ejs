@@ -43,7 +43,8 @@
 				return fetch('/tokens', {
 					method: 'get',
 					headers: {
-	     				'Authorization': 'Authorization ' + accessToken
+						'Content-Type': 'application/json',
+	     				'Authorization': 'Bearer ' + accessToken
 					},
 				}).then((response) => {
 					console.log(response)

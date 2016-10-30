@@ -5,8 +5,8 @@ const HeaderCredentials = require('../middleware/header-credentials.js');
 
 const getHomeView = {
 	method: 'get',
-	route: '/',
-	command: [
+	url: '/',
+	handler: [
 		HeaderCredentials.include,
 		function renderPage(req, res, next) {
 			res.render('home');
@@ -16,6 +16,4 @@ const getHomeView = {
 
 
 
-module.exports = [
-	getHomeView
-]
+module.exports = {getHomeView}

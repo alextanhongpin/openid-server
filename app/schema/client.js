@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-mongoose.Promise = global.Promise;
+//mongoose.Promise = global.Promise;
 
 const ClientSchema = new Schema({
 
@@ -16,16 +16,7 @@ const ClientSchema = new Schema({
 		type: String,
 		required: true 
 	},
-	// Date at which the client is created
-	created_at: {
-		type: Date,
-		default: Date.now 
-	},
-	// Date when the secret is updated
-	updated_at: {
-		type: Date,
-		default: Date.now 
-	},
+
 
 	// A list of accepted redirect urls
 	redirect_urls: [{
@@ -88,9 +79,14 @@ const ClientSchema = new Schema({
 		}
 	}
 	*/
+}, {
+	timestamps: { 
+		createdAt: 'created_at', 
+		updatedAt: 'updated_at' 
+	}
 });
 
-
+// For testing, mocha will throw error
 let Client = null;
 try {
   Client = mongoose.model('Client')

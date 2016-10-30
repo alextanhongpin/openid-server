@@ -1,5 +1,5 @@
 const base64 = require('./base64.js');
-const RefreshTokenErrors = require('./error-message.js').RefreshTokenErrors;
+const Errors = require('./error-message.js');
 
 const Client = require('../model/client.js');
 
@@ -17,8 +17,8 @@ function decode(encoded_credentials) {
 		const hasSemiColon = decodedCredentials.indexOf(':');
 		if (!hasSemiColon) {
 			reject({
-				error: RefreshTokenErrors.INVALID_REQUEST,
-				error_description: RefreshTokenErrors.getErrorDescriptionFrom(RefreshTokenErrors.INVALID_REQUEST)
+				error: Errors.INVALID_REQUEST,
+				error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_REQUEST)
 			});
 		}
 
@@ -37,8 +37,7 @@ function validate(req, res, next) {
 	const encodedCredentials = res.locals.encoded_credentials;
 
 
-	decode(encodedCredentials)
-	.then((decodedCredentials) => {
+	decode(encodedCredentials).then((decodedCredentials) => {
 
 		if (!decodedCredentials) {
 			return next({
@@ -47,12 +46,11 @@ function validate(req, res, next) {
 			});
 		}
 		return Client.findSecret(decodedCredentials);
-	})
-	.then((client) => {
+	}).then((client) => {
 		if (!client) {
 			return next({
-				error: RefreshTokenErrors.INVALID_CLIENT,
-				error_description: RefreshTokenErrors.getErrorDescriptionFrom(RefreshTokenErrors.INVALID_CLIENT)
+				error: Errors.INVALID_CLIENT,
+				error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_CLIENT)
 			});
 		}
 		res.locals.client = client;

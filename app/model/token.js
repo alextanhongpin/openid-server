@@ -24,13 +24,13 @@ const Model = {
 			token.user_agent = param.user_agent;
 		}).then(() => {
 			return token.save()
-		})
+		});
 	},
 
 
 	get() {
 		// add pagination later on
-		return Token.find()
+		return Token.find().populate('client_id').exec();
 	},
 
 	getByOwnerId(param) {

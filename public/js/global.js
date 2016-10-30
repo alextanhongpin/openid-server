@@ -7,6 +7,11 @@
 		const refreshToken = window.localStorage.refresh_token;
 
 		if (accessToken && refreshToken) {
+			// User is already registed
+			// User should not be in the registration page
+			if (window.location.pathname === '/register') {
+				window.location.href = '/';
+			}
 			
 		} else {
 			if (window.location.pathname !== '/register') {
@@ -15,8 +20,8 @@
 					// User is not logged in, go to registration page first
 					// After that carry authorization
 					let url = '/register?referrer=' + encodeURIComponent(document.referrer);
-					if (window.token) {
-						url += '&token=' + window.token;
+					if (window.client) {
+						url += '&client=' + window.client;
 					}
 					window.location.href = url;
 				} else {
@@ -121,140 +126,140 @@
 		});
 	}
 
-	function BaseService(options={}) {
-		const accessToken = window.localStorage.access_token;
-		if (!accessToken) {
-			throw new Error('You are not authorized to access the service');
-		}
-		const headers = Object.assign({
-			'Authorization': `Bearer ${ accessToken }`,
-			'Content-Type': 'application/json;charset=UTF-8'
-		}, options.headers || {});
-		const method = options.method || 'get';
-		const body = options.data || {};
-		const url = options.url;
-		return fetch(url, {
-			method,
-			headers,
-			body
-		}).then((data) => {
-			return data.json();
-		})
-	}
+	// function BaseService(options={}) {
+	// 	const accessToken = window.localStorage.access_token;
+	// 	if (!accessToken) {
+	// 		throw new Error('You are not authorized to access the service');
+	// 	}
+	// 	const headers = Object.assign({
+	// 		'Authorization': `Bearer ${ accessToken }`,
+	// 		'Content-Type': 'application/json;charset=UTF-8'
+	// 	}, options.headers || {});
+	// 	const method = options.method || 'get';
+	// 	const body = options.data || {};
+	// 	const url = options.url;
+	// 	return fetch(url, {
+	// 		method,
+	// 		headers,
+	// 		body
+	// 	}).then((data) => {
+	// 		return data.json();
+	// 	})
+	// }
 
-	const dispatcher = {
-		_events: [],
-		on(action, fn) {
-			if (!this._events[action]) this._events[action] = [];
-			this._events[action].push(fn); 
-		},
-		trigger(action, data) {
-			if (!this._events[action]) return null;
-			this._events[action].forEach((act) => {
-				act(data);
-			});
-		}
-	}
+	// const dispatcher = {
+	// 	_events: [],
+	// 	on(action, fn) {
+	// 		if (!this._events[action]) this._events[action] = [];
+	// 		this._events[action].push(fn); 
+	// 	},
+	// 	trigger(action, data) {
+	// 		if (!this._events[action]) return null;
+	// 		this._events[action].forEach((act) => {
+	// 			act(data);
+	// 		});
+	// 	}
+	// }
 
 
-	const ObservableFetch = {
-		_calls: {},
-		_expired: false,
-		push(id, call) {
-			if (!this._calls[id]) this._calls[id] = call;
-			//this._calls[id].push(call);
-		},
-		pop(id) {
-			if (this._calls[id]) {
-				delete this._calls[id];
-				//const index = this._calls.indexOf(id);
-				//this._calls.slice(index, 1);
-			}
-		},
+	// const ObservableFetch = {
+	// 	_calls: {},
+	// 	_expired: false,
+	// 	push(id, call) {
+	// 		if (!this._calls[id]) this._calls[id] = call;
+	// 		//this._calls[id].push(call);
+	// 	},
+	// 	pop(id) {
+	// 		if (this._calls[id]) {
+	// 			delete this._calls[id];
+	// 			//const index = this._calls.indexOf(id);
+	// 			//this._calls.slice(index, 1);
+	// 		}
+	// 	},
 
-		triggerCalls(id, call) {
-			this.push(id, call);
-				console.log('expiry', this._expired)
-			if (this._expired) {
+	// 	triggerCalls(id, call) {
+	// 		this.push(id, call);
+	// 			console.log('expiry', this._expired)
+	// 		if (this._expired) {
 	
 
-				//setTimeout(() => {
+	// 			//setTimeout(() => {
 					
-					return this._calls[id]().then((data) => {
-						if (!data.error) {
-							this._expired = false;
-							dispatcher.trigger(id, data);
-							this.pop(id);
-						}
-					});
-				//}, 2500);
+	// 				return this._calls[id]().then((data) => {
+	// 					if (!data.error) {
+	// 						this._expired = false;
+	// 						dispatcher.trigger(id, data);
+	// 						this.pop(id);
+	// 					}
+	// 				});
+	// 			//}, 2500);
 					
-			} else {
-				this._expired = false;
+	// 		} else {
+	// 			this._expired = false;
 				
-				return this._calls[id]().then((data) => {
+	// 			return this._calls[id]().then((data) => {
 
-					if (data.error) {
-						this._expired = true;
-						setTimeout(() => {
-							return Object.keys(this._calls).map((key, index) => {
-								return this.triggerCalls(key, this._calls[key]);
-							})
-						}, 2500);
-					} else {
+	// 				if (data.error) {
+	// 					this._expired = true;
+	// 					setTimeout(() => {
+	// 						return Object.keys(this._calls).map((key, index) => {
+	// 							return this.triggerCalls(key, this._calls[key]);
+	// 						})
+	// 					}, 2500);
+	// 				} else {
 
-						dispatcher.trigger(id, data);
-						this.pop(id);
+	// 					dispatcher.trigger(id, data);
+	// 					this.pop(id);
 
-					}
-				});
+	// 				}
+	// 			});
 
-			}
+	// 		}
 
-		},
+	// 	},
 
-	}
+	// }
 
-	function factory() {
-		return BaseService({
-			url: '/apps',
-			method: 'get',
-		})
-	}
+	// function factory() {
+	// 	return BaseService({
+	// 		url: '/apps',
+	// 		method: 'get',
+	// 	})
+	// }
 
-	function factoryCars() {
-		return BaseService({
-			url: '/cars',
-			method: 'get',
-		})
-	}
-	ObservableFetch.triggerCalls('hello', factory)
-	// .then((data) => {
-	// 	console.log('hello', data)
+	// function factoryCars() {
+	// 	return BaseService({
+	// 		url: '/cars',
+	// 		method: 'get',
+	// 	})
+	// }
+	// ObservableFetch.triggerCalls('hello', factory)
+	// // .then((data) => {
+	// // 	console.log('hello', data)
+	// // })
+
+	// dispatcher.on('hello', function(data)  {
+	// 	console.log('hello data', data)
 	// })
-
-	dispatcher.on('hello', function(data)  {
-		console.log('hello data', data)
-	})
 
 	
 
-	ObservableFetch.triggerCalls('another one', factory)
-	ObservableFetch.triggerCalls('cars', factoryCars)
-	ObservableFetch.triggerCalls('another cars', factoryCars)
-	// .then((data) => {
-	// 	console.log('another one', data)
-	// })
+	// ObservableFetch.triggerCalls('another one', factory)
+	// ObservableFetch.triggerCalls('cars', factoryCars)
+	// ObservableFetch.triggerCalls('another cars', factoryCars)
+	// // .then((data) => {
+	// // 	console.log('another one', data)
+	// // })
 
-	dispatcher.on('another one', function(data) {
-		console.log('another data', data)
-	})
-	dispatcher.on('cars', function(data) {
-		console.log('cars', data)
-	})
-	dispatcher.on('another cars', function(data) {
-		console.log('another cars', data)
-	})
+	// dispatcher.on('another one', function(data) {
+	// 	console.log('another data', data)
+	// })
+	// dispatcher.on('cars', function(data) {
+	// 	console.log('cars', data)
+	// })
+	// dispatcher.on('another cars', function(data) {
+	// 	console.log('another cars', data)
+	// })
 
 	// route to refresh the access token
 	function refreshTokenService(refreshToken) {

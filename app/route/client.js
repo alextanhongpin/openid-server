@@ -6,12 +6,12 @@ const Client = require('../model/client.js');
 // Render the client view
 const getClientView = {
 	method: 'get',
-	route: '/clients',
-	command(req, res, next) {
+	url: '/clients',
+	handler(req, res, next) {
 		res.render('client.ejs');
 	}
 }
 
-module.exports = [
+module.exports = {
 	getClientView
-]
+}

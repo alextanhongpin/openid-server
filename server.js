@@ -2,6 +2,9 @@ const express = require('express');
 const app = express();
 const port = require('./app/config/main.js').port;
 
+const mapRoute = require('./app/middleware/map-route.js');
+const apis = require('./app/api/_main.js');
+const routes = require('./app/route/_main.js');
 
 app.use(express.static(__dirname + '/public'));
 
@@ -12,10 +15,13 @@ require('./app/database/_main.js')
 require('./app/middleware/_main.js')(app);
 
 // Setup view routes 
-require('./app/route/_main.js')(app);
-
+mapRoute(routes, (api) => {
+	return app[api.method](api.url, api.handler);
+});
 // Setup api routes
-require('./app/api/_main.js')(app);
+mapRoute(apis, (api) => {
+	return app[api.method](api.url, api.handler);
+});
 
 // Setup Error handler
 const errorHandler = require('./app/middleware/error-handler.js');

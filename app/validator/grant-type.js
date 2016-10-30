@@ -1,4 +1,7 @@
 
+const Errors = require('../middleware/error-message.js');
+
+
 
 function isClientCredentials(req, res, next) {
 
@@ -6,8 +9,8 @@ function isClientCredentials(req, res, next) {
 
 	if (!grantType && grantType !== 'client_credentials') {
 		return next({
-			error: 'Invalid grant type',
-			error_description: 'The provided grant was invalid'
+			error: Errors.INVALID_GRANT,
+			error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_GRANT)
 		});
 	}
 	next();
@@ -19,8 +22,8 @@ function isAuthorizationCode(req, res, next) {
 
 	if (!grantType && grantType !== 'authorization_code') {
 		return next({
-			error: 'Invalid grant type',
-			error_description: 'The provided grant was invalid'
+			error: Errors.INVALID_GRANT,
+			error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_GRANT)
 		});
 	}
 	next();
@@ -32,8 +35,8 @@ function isRefresh(req, res, next) {
 
 	if (!grantType && grantType !== 'refresh_token') {
 		return next({
-			error: 'Invalid grant type',
-			error_description: 'The provided grant was invalid'
+			error: Errors.INVALID_GRANT,
+			error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_GRANT)
 		});
 	}
 	next();
@@ -43,21 +46,24 @@ function isPassword(req, res, next) {
 	const grantType = req.body.grant_type || req.query.grant_type;
 
 	if (grantType !== 'password') {
-		return next('err');
+		return next({
+			error: Errors.INVALID_GRANT,
+			error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_GRANT)
+		});
 	}
 	next();
 }
 
 
-function token(req, res, next) {
+function isToken(req, res, next) {
 
 	// check grant type - can be `refresh_token` or `password` 
 	const grantType = req.body.grant_type || req.query.grant_type;
 
 	if (!grantType) {
 		return next({
-			error: 'Invalid grant type',
-			error_description: 'The grant type provided is invalid'
+			error: Errors.INVALID_GRANT,
+			error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_GRANT)
 		});
 	}
 	if (grantType === 'refresh_token') {
@@ -68,12 +74,13 @@ function token(req, res, next) {
 		res.locals.grant_type = grantType;
 	} else {
 		return next({
-			error: 'Invalid grant type',
-			error_description: 'The grant type provided is invalid'
+			error: Errors.INVALID_GRANT,
+			error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_GRANT)
 		});
 	}
 	next();
 };
+
 
 
 module.exports = {
@@ -81,5 +88,5 @@ module.exports = {
 	authorizationCode: isAuthorizationCode,
 	refresh: isRefresh,
 	password: isPassword,
-	token
+	token: isToken
 }

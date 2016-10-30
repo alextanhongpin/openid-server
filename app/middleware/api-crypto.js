@@ -1,5 +1,5 @@
 
-// For api key: echo -n "@p1k3y" | openssl dgst -sha256 -hmac "@pig3n3r@t0r"
+
 const crypto = require('crypto');
 const config = require('../config/main.js').crypto;
 const ALGORITHM = config.algorithm;
@@ -10,8 +10,8 @@ const KEY = new Buffer(32);
 const HMAC_KEY = new Buffer(32);
 
 // Write string to buffer
-KEY.write(process.env.CRYPTO_API_KEY, 0);
-HMAC_KEY.write(process.env.CRYPTO_HMAC_KEY, 0);
+KEY.write(config.api_crypto, 0);
+HMAC_KEY.write(config.api_crypto_hmac, 0);
 
 const encrypt = function(plain_text) {
 	console.log(plain_text)

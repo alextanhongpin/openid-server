@@ -1,5 +1,6 @@
 /*
- * Use shortid to generate states
+ * Use shortid to generate states,
+ * Read more on sessions
 **/
 
 const shortid = require('shortid');

@@ -10,13 +10,14 @@ const ms = require('ms');
 // Middlewares, A-Z
 const asyncWrapper = require('../middleware/async-wrapper.js');
 const nocache = require('../middleware/nocache.js');
+const jwt = require('../middleware/jwt.js');
 const jwtToken = require('../middleware/jwt-openid.js');
-const Useragent = require('../middleware/useragent.js');
+
+const rurl = require('../middleware/rurl.js');
 const fullUrl = require('../middleware/url.js');
 const HeaderCredentials = require('../middleware/header-credentials.js');
-const RefreshTokenErrors = require('../middleware/error-message.js').RefreshTokenErrors;
+const Errors = require('../middleware/error-message.js');
 const RestHandler = require('../middleware/rest-handler');
-
 
 
 // Models, A-Z
@@ -33,18 +34,22 @@ const GrantType = require('../validator/grant-type.js');
  * GET /register
  * Description: Render the registration page
 **/
-const getRegistrationView = {
+const registrationPage = {
 	method: 'get',
-	route: '/register',
-	command: [
+	url: '/register',
+	handler: [
 
 		HeaderCredentials.include,
 		
 		function renderView(req, res, next) {
 			// Render the view
 
+			// The referrer and client refers to the registered client 
+			// that goes through the consent view
+			// the query paramater for the authorization is encoded in the client
 			res.locals.referrer = JSON.stringify(req.query.referrer || '');
-			res.locals.token = JSON.stringify(req.query.token | '');
+			res.locals.client = JSON.stringify(req.query.client || '');
+			//res.locals.token = JSON.stringify(req.query.token || '');
 			res.render('register');
 		}
 	]
@@ -52,8 +57,8 @@ const getRegistrationView = {
 // TODO: Change to grant token flow (access or password)
 const refreshTokenFlow = {
 	method: 'post',
-	route: '/token',
-	command: [
+	url: '/token',
+	handler: [
 		// Authorization header must be of type Basic
 		HeaderAuth.basic,
 		// return header credentials as res.locals.encodedCredentials,
@@ -75,8 +80,8 @@ const refreshTokenFlow = {
 
 				if (!username || !password) {
 					return next({
-						error: RefreshTokenErrors.UNAUTHORIZED_CLIENT,
-						error_description: RefreshTokenErrors.getErrorDescriptionFrom(RefreshTokenErrors.UNAUTHORIZED_CLIENT)
+						error: Errors.UNAUTHORIZED_CLIENT,
+						error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
 					});		
 				} 
 
@@ -86,8 +91,8 @@ const refreshTokenFlow = {
 				if (!grant_type || !refresh_token) {
 					// Required request
 					return next({
-						error: RefreshTokenErrors.UNAUTHORIZED_CLIENT,
-						error_description: RefreshTokenErrors.getErrorDescriptionFrom(RefreshTokenErrors.UNAUTHORIZED_CLIENT)
+						error: Errors.UNAUTHORIZED_CLIENT,
+						error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
 					});			
 				}
 			}
@@ -130,8 +135,8 @@ const refreshTokenFlow = {
 
 				if (!matchingToken) {
 					return next({
-						error: RefreshTokenErrors.UNAUTHORIZED_CLIENT,
-						error_description: RefreshTokenErrors.getErrorDescriptionFrom(RefreshTokenErrors.UNAUTHORIZED_CLIENT)
+						error: Errors.UNAUTHORIZED_CLIENT,
+						error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
 					});
 				}
 				res.locals.token = matchingToken;
@@ -195,13 +200,62 @@ const refreshTokenFlow = {
 				next();
 			}
 		}),
+		// check if the url is a redirection from conesent view
+		// contains referrer and also encoded client
+		// 
+		function validateReferrer(req, res, next) {
+			console.log('validateReferrer', req.body.refferer)
+			const referrer = req.body.referrer;
+			if (!referrer) return next();
+			// The refferer is a url http://localhost:3000
+			res.locals.referrer = referrer;
+
+			next();
+		},
+		function validateClient(req, res, next) {
+			console.log('validateClient', req.body.client)
+			const client = req.body.client;
+			if (!client) return next();
+
+			jwt.verify(client).then((data) => {
+				console.log('validateClient:jwt', data)
+				res.locals.decoded_client = data;
+				next();
+			}).catch((err) => {
+				return next(err);
+			});
+		},
+
+		// If the registration is coming from consent page, 
+		// costruct a redirect url
+		function constructRedirectUrl(req, res, next) {
+			if (!res.locals.decoded_client) return next();
+
+			const decoded_client = res.locals.decoded_client;
+			res.locals.redirect = true;
+			const AUTH_ENDPOINT = 'http://localhost:4000/oauth2/authorize';
+
+			res.locals.redirect_url = rurl.construct(AUTH_ENDPOINT, {
+				state: decoded_client.state,
+				scope: decoded_client.scope,
+				redirect_uri: decoded_client.redirect_uri,
+				client_secret: decoded_client.client_secret,
+				client_id: decoded_client.client_id,
+				response_type: decoded_client.response_type
+			});
+			console.log(res.locals)
+			next();
+		},
 		nocache,
 		function returnResponse(req, res, next) {
 			RestHandler(req, res).success({
 				access_token: res.locals.token.access_token,
 				token_type: 'Bearer',
 				expires_in: ms(res.locals.expiresIn) / 1000, // Convert to milliseconds
-				refresh_token: res.locals.token.refresh_token
+				refresh_token: res.locals.token.refresh_token,
+				// the user should be redirected to the consent page
+				redirect: res.locals.redirect,
+				redirect_url: res.locals.redirect_url
 			});
 		}
 
@@ -226,8 +280,8 @@ function EnumFlow (grantType) {
 **/
 const introspectRoute = {
 	method: 'post',
-	route: '/instrospect', // introspect
-	command: [
+	url: '/instrospect', // introspect
+	handler: [
 		// Check if the content-type is application/x-www-form-urlencoded
 		ContentType.form,
 		// Authorization header must be of type bearer
@@ -262,8 +316,8 @@ const introspectRoute = {
 let count = 0;
 const appsRoute = {
 	method: 'get',
-	route: '/apps',
-	command(req, res, next) {
+	url: '/apps',
+	handler(req, res, next) {
 		console.log(count)
 		count += 1;
 		if (count === 1) {
@@ -283,8 +337,8 @@ const appsRoute = {
 }
 const carsRoute = {
 	method: 'get',
-	route: '/cars',
-	command(req, res, next) {
+	url: '/cars',
+	handler(req, res, next) {
 
 		setTimeout(()=> {
 			return res.status(200).json({
@@ -293,11 +347,11 @@ const carsRoute = {
 		}, 500)
 	}
 }
-module.exports = [
-	getRegistrationView,
+module.exports = {
+	registrationPage,
 	refreshTokenFlow,
 	introspectRoute,
 	appsRoute,
 	carsRoute
-]
+}
 

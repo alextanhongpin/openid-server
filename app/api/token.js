@@ -10,12 +10,16 @@ const jwtToken = require('../middleware/jwt-openid');
 const jwt = require('../middleware/jwt');
 
 // Models
+const AuthorizationCode = require('../model/code.js');
 const Token = require('../model/token.js');
+
+
+
 const AuthorizationCodeGrantFlow = require('../middleware/oauth2.js').AuthorizationCodeGrantFlow;
 const ClientCredentials = require('../middleware/client-credentials.js');
 const HeaderCredentials = require('../middleware/header-credentials.js');
 const useragent = require('../middleware/useragent.js');
-const RefreshTokenErrors = require('../middleware/error-message.js').RefreshTokenErrors;
+const Errors = require('../middleware/error-message.js');
 const fullUrl = require('../middleware/url.js');
 const nocache = require('../middleware/nocache.js');
 
@@ -29,7 +33,8 @@ const route = require('../config/main.js').route;
 const HeaderAuth = require('../validator/header-auth.js');
 const ContentType = require('../validator/content-type.js');
 const GrantType = require('../validator/grant-type.js');
-
+const IntrospectToken = require('../validator/introspect.js');
+const AccessToken = require('../validator/access-token.js');
 
 /*
  * POST /oauth2/introspect
@@ -40,8 +45,8 @@ const GrantType = require('../validator/grant-type.js');
 **/
 const validateToken = {
 	method: 'post',
-	route: '/oauth2/introspect',
-	command:[	
+	url: '/oauth2/introspect',
+	handler:[	
 		// Check if the content-type is application/x-www-form-urlencoded
 		ContentType.form,
 		// Check if the authorization header contain basic
@@ -51,36 +56,17 @@ const validateToken = {
 		// Validate the encoded credentials, query the DB for the client
 		// and store the client found as res.locals.client
 		ClientCredentials.validate,
-
-		function parseRequestBody(req, res, next) {
-			const { token, token_type_hint } = req.body;
-
-			if (!token || !token_type_hint || token_type_hint !== 'access_token') {
-				return next({
-					error: 'Invalid request',
-					error_description: 'One or more possible fields are missing from the request body'
-				});
-			}
-
-			res.locals.access_token = token;
-
-			return next();
-		},
+		// store introspected token as res.locals.access_token
+		IntrospectToken.accessToken,
+		// Validate the access token, and store it in
+		// res.locals.access_token, together with the expiry time
+		AccessToken.body,
 
 		function response(req, res, next) {
-			const accessToken = res.locals.access_token;
-			jwtToken.verify(accessToken)
-			.then((decoded) => {
-				if (decoded) {
-					return res.status(200).json({
-						active: true,
-						access_token: accessToken,
-						expires_in: decoded.expires_in_seconds
-					})
-				} 
-			})
-			.catch((err) => {
-				return next(err);
+			res.status(200).json({
+				active: true,
+				access_token: res.locals.access_token,
+				expires_in: res.locals.expires_in_seconds
 			});
 		},
 
@@ -91,17 +77,27 @@ const validateToken = {
  * GET /tokens
  * 
  * Description: Get a list of tokens created by the user
- *
+ * Example of firing the request with the bearer header
 **/
 const getTokens = {
 	method: 'get',
-	route: route.tokens,
-	command(req, res, next) {
+	url: route.tokens,
+	handler: [
+		// Must be application/json
+		ContentType.json,
+		// Bearer type
+		HeaderAuth.bearer,
+		// get the encoded credentials in the header
+		HeaderCredentials.extract,
+		// validate the jwt token to see if it is valid
+		AccessToken.bearer,
 
-		Token.getByOwnerId({ 
-			id: req.user && req.user.id 
-		}).then(RestHandler(req, res).success);
-	}
+		function(req, res, next) {
+			Token.getByOwnerId({ 
+				id: res.locals.user_id
+			}).then(RestHandler(req, res).success);
+		}
+	]
 }
 
 /*
@@ -114,9 +110,9 @@ const getTokens = {
 **/
 const accessTokenRequest = {
 	method: 'post',
-	route: '/oauth2/token',
+	url: '/oauth2/token',
 	// accessTokenRequest
-	command: [
+	handler: [
 		// Turn off caching
 		nocache, 
 		//GrantType.authorizationCode,
@@ -131,9 +127,7 @@ const accessTokenRequest = {
 		// Validate the encodedCredentials as decoded [clientId:clientSecret],
 		// store the client as res.locals.client
 		ClientCredentials.validate,
-		// check if the grant type is `authorization_code`
 		
-
 		asyncWrapper(function* handleRefreshToken(req, res, next) {
 
 			if (res.locals.grant_type === 'refresh_token') {
@@ -151,8 +145,8 @@ const accessTokenRequest = {
 
 				if (!matchingToken) {
 					return next({
-						error: RefreshTokenErrors.UNAUTHORIZED_CLIENT,
-						error_description: RefreshTokenErrors.getErrorDescriptionFrom(RefreshTokenErrors.UNAUTHORIZED_CLIENT)
+						error: Errors.UNAUTHORIZED_CLIENT,
+						error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
 					});
 				}
 				const { owner_id, user_agent, application_name, application_url } = matchingToken;
@@ -181,6 +175,7 @@ const accessTokenRequest = {
 				}
 
 
+				console.dir(options, {depth: null, colors: true})
 				matchingToken.access_token = yield matchingToken.sign(payload, options);
 				const updatedToken = yield matchingToken.save();
 
@@ -190,10 +185,10 @@ const accessTokenRequest = {
 					expires_in: ms(expiresIn) / 1000, // Convert to milliseconds
 					refresh_token: refresh_token					
 				});
-				next('route');
-			}
+				// Skip all, end the middleware chain now
+				return next('route');
+			} 
 			next();
-		
 		}),
 
 		function parseRequest(req, res, next) {
@@ -210,8 +205,8 @@ const accessTokenRequest = {
 
 			if (!code) {
 				return next({
-					error: AccessTokenErrors.INVALID_REQUEST,
-					error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_REQUEST)
+					error: Errors.INVALID_REQUEST,
+					error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_REQUEST)
 				});
 			}
 			if (!redirectUri) {
@@ -219,16 +214,16 @@ const accessTokenRequest = {
 
 				// url still needs to be validated to be equal the client redirect url
 				return next({
-					error: AccessTokenErrors.INVALID_REQUEST,
-					error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.INVALID_REQUEST)
+					error: Errors.INVALID_REQUEST,
+					error_description: Errors.getErrorDescriptionFrom(Errors.INVALID_REQUEST)
 				});
 			}
 
 			const client = res.locals.client;
 			if (client.redirect_urls.indexOf(redirectUri) === -1) {
 				return next({
-					error: AccessTokenErrors.UNAUTHORIZED_CLIENT,
-					error_description: AccessTokenErrors.getErrorDescriptionFrom(AccessTokenErrors.UNAUTHORIZED_CLIENT)
+					error: Errors.UNAUTHORIZED_CLIENT,
+					error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
 				});	
 			}
 			next();
@@ -253,7 +248,20 @@ const accessTokenRequest = {
 
 			const code = req.body.code;
 
-			jwt.verify(code).then((decoded) => {
+			AuthorizationCode.findOne({
+				code: code,
+			}).then((model) => {
+				if (!model) {
+					return next({
+						error: Errors.UNAUTHORIZED_CLIENT,
+						error_description: Errors.getErrorDescriptionFrom(Errors.UNAUTHORIZED_CLIENT)
+					});	
+				}
+				// The authorization code can only be used once
+				return model.remove();
+			}).then((data) => {
+				return jwt.verify(code)
+			}).then((decoded) => {
 
 				// The code should only be used once
 				// If there are subsequent code, it should be delete
@@ -261,7 +269,10 @@ const accessTokenRequest = {
 				// Do checking for the headers here
 				const user_agent = decoded.headers;
 				
+				// store the access token and refresh token pair 
+				// together with the device info
 				return Token.create({
+					client_id: res.locals.client._id,
 					access_token_options: accessTokenOptions,
 					refresh_token_options: options,
 					user_id: user_id,
@@ -270,7 +281,9 @@ const accessTokenRequest = {
 			}).then((token) => {
 				res.locals.token = token;
 				return next();
-			})
+			}).catch((err) => {
+				return next(err);
+			});
 		},
 		function response(req, res, next) {
 
@@ -285,12 +298,13 @@ const accessTokenRequest = {
 	]
 }
 
-module.exports = [
+module.exports = {
 	//authorizeTokenRoute,
 	validateToken,
 	getTokens,
 	//refreshToken,
 	accessTokenRequest
-]
+}
+
 
 

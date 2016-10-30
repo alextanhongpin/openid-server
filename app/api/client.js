@@ -23,10 +23,10 @@ const route = require('../config/main.js').api_route;
 **/
 const authorizeUser = {
 	method: 'use',
-	route: route.clients,
+	url: route.clients,
 
 	//command: asyncWrapper(OAuth2.token)
-	command: [
+	handler: [
 		// Store the encoded credentials in res.locals.encodedCredentials
 		HeaderCredentials.extract,
 		asyncWrapper(function *(req, res, next) {
@@ -54,8 +54,8 @@ const authorizeUser = {
 
 const getClients = {
 	method: 'get',
-	route: route.clients,
-	command(req, res, next) {
+	url: route.clients,
+	handler(req, res, next) {
 		Client.get({
 			limit: 10,
 			offset: 0,
@@ -82,8 +82,8 @@ const getClients = {
 
 const createClient = {
 	method: 'post',
-	route: route.clients,
-	command(req, res, next) {
+	url: route.clients,
+	handler(req, res, next) {
 		const param = Object.assign(req.body, req.user || {});
 		console.log(param)
 		Client.create(param)
@@ -109,8 +109,8 @@ const createClient = {
 
 const getClientById = {
 	method: 'get',
-	route: route.clients_id,
-	command(req, res, next) {
+	url: route.clients_id,
+	handler(req, res, next) {
 		Client.getById({
 			id: req.params.id
 		}).then((results) => {
@@ -126,8 +126,8 @@ const getClientById = {
 
 const deleteClient = {
 	method: 'delete',
-	route: route.clients_id,
-	command(req, res, next) {
+	url: route.clients_id,
+	handler(req, res, next) {
 		Client.remove({
 			id: req.params.id.toString()
 		}).then((results) => {
@@ -144,20 +144,20 @@ const deleteClient = {
 
 const removeAll = {
 	method: 'delete',
-	route: route.clients,
-	command(req, res, next) {
+	url: route.clients,
+	handler(req, res, next) {
 		return Client.remove({});
 	}
 }
 
 
-module.exports = [
+module.exports = {
 	//authorizeUser,
 	getClients,
 	getClientById,
 	createClient,
 	deleteClient,
 	removeAll
-]
+}
 
 

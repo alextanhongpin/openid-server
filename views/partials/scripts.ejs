@@ -1,6 +1,7 @@
 
 
 <script>
-
-	window.credentials = '<%= bearer_type + ' ' + encoded_credentials %>';
+const bearerType = '<%-locals && locals.bearer_type%>';
+const credentials = '<%- locals && locals.encoded_credentials %>';
+	window.credentials = bearerType + ' ' + credentials;
 </script>

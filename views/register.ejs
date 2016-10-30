@@ -24,7 +24,8 @@
 	<script type="text/javascript">
 		
 		window.referrer = <%- locals && locals.referrer %>;
-		window.token = <%- locals && locals.token %>;
+		window.client = <%- locals && locals.client %>;
+
 				
 	</script>
 	<script type="text/javascript" src='/js/global.js'></script>
@@ -40,7 +41,8 @@
 				password: document.querySelector('input[name=password]').value,
 				grant_type: 'password',
 				referrer: window.referrer,
-				token: window.token
+				//token: window.token
+				client: window.client
 			}).then((response) => {
 				console.log(response)
 

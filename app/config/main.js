@@ -8,7 +8,11 @@ module.exports = {
 		hmac_algorithm: 'sha1',
 		jwt_token: process.env.CRYPTO_JWT_KEY,
 		jwt_openid_key: process.env.CRYPTO_JWT_OPENID_KEY,
-		authorization_expires_in_seconds: 60 
+		authorization_expires_in_seconds: 60,
+		api_crypto: process.env.CRYPTO_API_KEY,
+		api_crypto_hmac: process.env.CRYPTO_HMAC_KEY,
+		key: process.env.CRYPTO_KEY,
+		hmac: process.env.CRYPTO_HMAC_KEY
 	},
 
 	route: {

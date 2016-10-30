@@ -1,15 +1,9 @@
 
 // import routes here
 
-module.exports = app => {
+module.exports = {
 
-	[ 
-		require('./client.js'),
-		require('./home.js'),
-		require('./token.js')
-	].map((actions) => {
-		actions.map((action) => {
-			return app[action.method](action.route, action.command);
-		})
-	})
+	client: require('./client.js'),
+	home: require('./home.js'),
+	token: require('./token.js')
 }

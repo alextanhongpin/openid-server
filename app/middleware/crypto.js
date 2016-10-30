@@ -12,8 +12,8 @@ const KEY = new Buffer(32);
 const HMAC_KEY = new Buffer(32);
 
 // Write string to buffer
-KEY.write(process.env.CRYPTO_KEY, 0);
-HMAC_KEY.write(process.env.CRYPTO_HMAC_KEY, 0);
+KEY.write(config.key, 0);
+HMAC_KEY.write(config.hmac, 0);
 // const id = crypto.randomBytes(16).toString("hex");
 const encrypt = function(plain_text) {
 	const IV = new Buffer(crypto.randomBytes(16));
