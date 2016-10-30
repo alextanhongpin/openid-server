@@ -1,34 +1,71 @@
 // For jwt openid: echo -n "jWt0p3N1d" | openssl dgst -sha256 -hmac "jWt0p3N1d$33rt"
-const JWT_SECRET = process.env.CRYPTO_JWT_OPENID_KEY;
-const jwt = require('jsonwebtoken');
 
+
+const crypto = require('../config/main.js').crypto;
+const jwt = require('jsonwebtoken');
+const ms = require('ms');
+
+
+const expires_in_seconds = 60 * 1;
+
+function createPayloadOptions(param) {
+	return {
+		audience: param.audience,
+		issuer: param.issuer,
+		subject: param.subject,
+		expiresIn: param.expiresIn
+	}
+}
+
+/*
+ * @param options (optional)
+ * @param payload (required)
+**/
 function signToken(param) {
 	const options = {
 		audience: param.options.audience, // e.g. http://localhost:3000,
 		issuer: param.options.issuer, // e.g. http://localhost:4000,
-		subject: param.options.subject// e.g. john.doe,
+		subject: param.options.subject,// e.g. john.doe,
+		expiresIn: expires_in_seconds
 	}
-	const payload = Object.assign({
-		exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1hr expiration
-	}, param.payload)
-	return jwt.sign(payload, JWT_SECRET, options);
+	return jwt.sign(param.payload, crypto.jwt_openid_key, options);
 }
+function signToken2(payload, options) {
+	return new Promise((resolve, reject) => {
+		jwt.sign(payload, crypto.jwt_openid_key, options, (err, code) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(code);
+			}
+		});
+	})
+}
+
+
+
+
 
 function verifyToken(token) {
 	return new Promise((resolve, reject) => {
-		jwt.verify(token, JWT_SECRET, function(err, decoded) {
+		jwt.verify(token, crypto.jwt_openid_key, (err, decoded) => {
 			if (err) {
-				reject(err);
+				return reject(err);
 			} else {
-				resolve(decoded);
+				decoded.expires_in_seconds = calculateExpirationTime(decoded);
+				return resolve(decoded);
 			}
 		});
 	});
 }
 
+function calculateExpirationTime(decoded) {
+	return Math.floor(expires_in_seconds - (Date.now() / 1000 - decoded.iat));
+}
 
 module.exports = { 
 	sign: signToken,
+	sign2: signToken2, 
 	verify: verifyToken 
 }
 

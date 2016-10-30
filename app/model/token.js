@@ -5,23 +5,28 @@ const useragent = require('useragent');
 
 const Model = {
 	create(param) {
+
+		console.log('access_token_options', param)
 		const token = new Token();
-
-		token.access_token = token.generateAccessToken({
-			payload: param.payload_user,
-			options: param.options
-		});
-
-		token.refresh_token = token.generateRefreshToken({
-			payload: param.payload_device,
-			options: param.options
-		});
-
-		token.owner_id = param.payload_user.user_id;
-		token.user_agent = param.payload_device.user_agent;
-
-		return token.save();
+		return token.sign({
+			user_id: param.user_id
+		}, param.access_token_options)
+		.then((access_token) => {
+			token.access_token = access_token;
+		}).then(() => {
+			return token.sign({
+				user_agent: param.user_agent
+			}, param.refresh_token_options)
+		}).then((refresh_token) => {
+			token.refresh_token = refresh_token;
+		}).then(() => {
+			token.owner_id = param.user_id;
+			token.user_agent = param.user_agent;
+		}).then(() => {
+			return token.save()
+		})
 	},
+
 
 	get() {
 		// add pagination later on
@@ -62,7 +67,15 @@ const Model = {
 		// if same user agent, refresh the access token
 		// else create a new device, and send an email which can allow you to deactivate it
 		return Token.findOneAndUpdate();
-	}
+	},
+
+	findRefreshToken(refreshToken) {
+		return Token.findOne({
+			refresh_token: refreshToken
+		});
+	},
+
+
 }
 
 

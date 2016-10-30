@@ -1,4 +1,3 @@
-
 const User = require('../schema/user.js');
 const mongoose = require('mongoose');
 
@@ -6,11 +5,11 @@ const Model = {
 	create(param) {
 		const user = new User();
 		user.local.email = param.email;
-		user.local.password = user.generateHash(param.password);
+		user.local.password = param.password;
 		return user.save();
 	},
 
-	checkIfEmailExist(param) {
+	findByEmail(param) {
 		return User.findOne({
 			'local.email': param.email
 		});

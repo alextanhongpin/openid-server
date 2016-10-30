@@ -1,51 +1,80 @@
+// Description: An owner can create applications by creating oauth2 clients
+
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 mongoose.Promise = global.Promise;
 
 const ClientSchema = new Schema({
+
+	// A secret that will be generated for clients to use
 	client_secret: {
 		type: String,
 		required: true 
 	},
+	// The id of the application that will be generated automatically
 	client_id: {
 		type: String,
 		required: true 
 	},
+	// Date at which the client is created
 	created_at: {
 		type: Date,
 		default: Date.now 
 	},
+	// Date when the secret is updated
 	updated_at: {
 		type: Date,
 		default: Date.now 
 	},
 
-	// should be an array....
-	redirect_url: {
+	// A list of accepted redirect urls
+	redirect_urls: [{
+		type: String,
+		required: true
+	}],
+
+	// A list of whitelisted domains */
+	whitelisted_domains: [{
+		type: String
+	}],
+
+	// A list of blacklisted domains
+	blacklisted_domains: [{
+		type: String
+	}],
+
+	// The website of the application
+	website: {
 		type: String,
 		required: true 
 	},
-	auth_url: {
+	description: {
 		type: String,
-		required: true 
 	},
-	domain_url: {
+	logo_image: {
 		type: String,
-		required: true 
 	},
 	application_name: {
 		type: String,
 		required: true,
-		// unique: true
+		unique: true
 	},
-	application_category: {
+	category: {
 		type: String,
 		required: true
 	},
+	subcategory: [{
+		type: String
+	}],
 	api_version: {
 		type: String,
 		default: '0.0.1'
-	}
+	},
+	owner_id:  { 
+		type: mongoose.Schema.Types.ObjectId, 
+		ref: 'User',
+		required: true
+	},
 
 	/*
 	email: {

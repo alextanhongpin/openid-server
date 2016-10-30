@@ -1,50 +1,14 @@
-// // Load the bcrypt module
-// var bcrypt = require('bcrypt');
-// // Generate a salt
-// var salt = bcrypt.genSaltSync(10);
-// // Hash the password with the salt
-// var hash = bcrypt.hashSync("my password", salt);
+// Description: User Schema for the registered users
 
-// // Load the password hash from DB
-// // Let's assume it's stored in a variable called `hash`
-// bcrypt.compareSync("my password", hash); // true
-// bcrypt.compareSync("not my password", hash); // false
-
-
-// var bcrypt = require('bcrypt');
-// bcrypt.genSalt(10, function(err, salt) {
-//     bcrypt.hash("my password", salt, function(err, hash) {
-//         // Store hash in your password DB.
-//     });
-// });
- 
-// // or
- 
-// bcrypt.hash('bacon', 10, function(err, hash) {
-//     // Store hash in your password DB.
-// });
-
-// // Load password hash from DB
-// bcrypt.compare("my password", hash, function(err, res) {
-//     // res === true
-// });
-// bcrypt.compare("not my password", hash, function(err, res) {
-//     // res === false
-// });
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt-nodejs');
 mongoose.Promise = require('bluebird');//global.Promise;
 
+const HttpStatus = require('http-status-codes');
 
 const UserSchema = new Schema({
 	version: {type: String, default: '0.0.1' },
-
-	token: {
-		access_token: String,
-		refresh_token: String
-	},
-
 	local: {
 		email: String,
 		password: String,
@@ -134,6 +98,12 @@ const UserSchema = new Schema({
 UserSchema.methods.generateHash = function (password) {
 	return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 }
+
+UserSchema.pre('save', function(next) {
+	if (!this.isModified('local.password')) return next();
+	this.local.password = bcrypt.hashSync(this.local.password, bcrypt.genSaltSync(8), null);
+	next();
+});
 
 UserSchema.methods.validatePassword = function (password) {
 	return bcrypt.compareSync(password, this.local.password);

@@ -2,8 +2,6 @@
 
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
-
-
 module.exports = app => {
 
 	// parse application/x-www-form-urlencoded
@@ -15,4 +13,5 @@ module.exports = app => {
 
 	// set default view engine
 	app.set('view engine', 'ejs');
+
 }

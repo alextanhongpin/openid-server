@@ -5,12 +5,18 @@
 </head>
 <body>
 
-
+whitelisted_domains []
+blacklisted_domains []
+website
+description
+logo_image
+category
+subcategory
 	<h1>Create New API Client</h1>
 
 	<div>
 		<p><label>Redirect URL</label></p>
-		<p><input type="text" name="redirect_url" placeholder='redirect_url'></p>
+		<p><input type="text" name="redirect_urls" placeholder='redirect_urls'></p>
 	</div>
 	<div>
 		<p><label>Auth URL</label></p>
@@ -32,7 +38,8 @@
 	<button id='create'>Create New Client</button>
 
 	<div id='output'></div>
-
+	
+	<script type="text/javascript" src='/js/global.js'></script>
 	<script type="text/javascript">
 		
 
@@ -40,11 +47,12 @@
 		return document.querySelector(`input[name="${name}"]`).value;
 	}
 
+	const accessToken = window.localStorage.access_token;
 	function get() {
 		const payload = JSON.stringify({
-			redirect_url: getInputValue('redirect_url'),
+			redirect_urls: [getInputValue('redirect_urls')],
 			auth_url: getInputValue('auth_url'),
-			domain_url: getInputValue('domain_url'),
+			website: getInputValue('domain_url'),
 			application_name: getInputValue('application_name'),
 			application_category: getInputValue('application_category')
 		});
@@ -52,7 +60,8 @@
 		fetch('/api/clients', {
 			method: 'post',
 		    headers: {
-		      'Content-Type': 'application/json'
+		      'Content-Type': 'application/json',
+				'Authorization': 'Authorization ' + accessToken, 
 		      //'Content-Type': 'multipart/form-data'
 		      // x-www-form-urlencoded
 		    },
@@ -63,6 +72,7 @@
 			console.log(response)
 			//window.location.href = response.redirect_url;
 		}).catch(function(err) {
+			console.log(err)
 			// Error :(
 		});
 	}
@@ -102,7 +112,7 @@
 					output.innerHTML += `
 						<div class='js-list-wrapper-${model._id}'>
 							<p><b>${ model.application_name }</b></p>
-							<p>Callback URL: ${ model.redirect_url }</p>
+							<p>Callback URL: ${ model.redirect_urls[0] }</p>
 							<p>Client ID: ${ model.client_id }</p>
 							<p>Client Secret ${ model.client_secret }</p>
 

@@ -5,92 +5,79 @@
 
 	<style type="text/css">
 		
-		body {
-			display: none;
-		}
+
 	</style>
+
+	<%- include partials/scripts.ejs %>
 </head>
 <body>
 
 
 	<h1>You are logged in the following devices</h1>
 
+	<button id='logout'>Logout</button>
+
 
 	<table id='output'></table>
-
+	<script type="text/javascript">
+		
+		window.referrer = '<%- locals && locals.referrer ? JSON.stringify(referrer) : '' %>';
+		
+				
+	</script>
+	<script type="text/javascript" src='/js/global.js'></script>
 	<script type="text/javascript">
 
 		'use strict';
 
 
 		(function() {
-			const accessToken = window.localStorage.access_token;
-			const refreshToken = window.localStorage.refresh_token;
 
-			if (accessToken && refreshToken) {
-
-				// validate access token first
-
-
-				validateToken(accessToken, refreshToken);
-				// const isValid = true;
-				// const isExpired = false;
-				// if (isValid) {
-				// } else if (isExpired) {
-
-				// } else {
-				// 	window.location.href = '/register';
-				// }
-				// ifExist
-
-				// else
-				document.body.style.display = 'block';
-			} else {
-				window.location.href = '/register';
-			}
-
-			function validateToken(accessToken, refreshToken) {
-				return fetch('/tokens/validate', {
-					method: 'POST',
-					headers: {
-	     				'Authorization': 'Authorization ' + accessToken, 
-	     				'Content-Type': 'application/x-www-form-urlencoded'
-						//'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						refreshToken: refreshToken
-					})
-				}).then(function(response) {
-					console.log(response)
-					return response.json()
-				}).then(function(response) {
-					console.log(response)
-					//window.location.href = response.redirect_url;
-				}).catch(function(err) {
-					console.log(err.toString());
-					// Error :(
-				});
-			}
+			
+			let accessToken = window.localStorage.access_token;
 
 
 			function fetchTokens(accessToken) {
+
+	
 				return fetch('/tokens', {
 					method: 'get',
 					headers: {
 	     				'Authorization': 'Authorization ' + accessToken
 					},
-
-				}).then(function(response) {
+				}).then((response) => {
+					console.log(response)
 					return response.json()
-				}).catch(function(err) {
-					// Error :(
+				})
+			}
+
+			function retryMechanism(fn, accessToken, throttle) {
+				console.log('retryMechanism', throttle)
+				accessToken = window.localStorage.access_token;
+				return fn(accessToken)
+				.then((response) => {
+					if (!response.success) {
+						if (response.error_type === 'Bad Request') {
+
+							return new Promise((resolve, reject) => {
+								setTimeout(() => {
+									if (throttle < 3) {
+										resolve(retryMechanism(fn, accessToken, throttle + 1))
+									}
+								}, 500)
+							})
+							
+						}
+					}
+					return response;
 				});
 			}
 
-			fetchTokens(accessToken)
+			retryMechanism(fetchTokens, accessToken, 0)
 			.then((results) => {
-				console.log(results)
+				console.log('fetchTokens:Results', results)
 				if (!results) return;
+				if (!results.success) return;
 
 				const output = document.getElementById('output');
 				output.innerHTML += `
@@ -111,7 +98,7 @@
 							<td>${ model.browser }</td>
 							<td>${ model.created_at }</td>
 							<td>${ model.updated_at }</td>
-							<td>${ model.access_token.substring(0, 20) + '...' }</td>
+							<td>${ model.access_token ? model.access_token.substring(0, 20) + '...' : null }</td>
 							<td>${ model.refresh_token.substring(0, 20)  + '...'}</td>
 							<td>
 								<button>Delete</button>
@@ -120,8 +107,17 @@
 					`
 				})
 			}).catch((err) => {
-				console.log(err)
+				console.log('fetchTokensError', err)
 			})
+
+
+			const logout = document.getElementById('logout');
+			logout.addEventListener('click', (evt) => {
+				window.localStorage.removeItem('access_token');
+				window.localStorage.removeItem('refresh_token');
+
+				window.location.href = '/register';
+			}, false);
 
 		})()
 		

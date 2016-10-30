@@ -1,4 +1,8 @@
-
+/*
+ * url.js
+ *
+ * Description: Construct the full URL of the request
+**/
 const url = require('url');
 
 function fullUrl(req) {

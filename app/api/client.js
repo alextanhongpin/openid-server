@@ -1,21 +1,66 @@
-const Client = require('../model/client.js');
+// Middlewares
+const asyncWrapper = require('../middleware/async-wrapper');
+
+const jwtToken = require('../middleware/jwt-openid');
+
+// Modules
 const HttpStatus = require('http-status-codes');
 
+// Models
+const Client = require('../model/client.js');
+
+const OAuth2 = require('../middleware/oauth2.js');
+const HeaderCredentials = require('../middleware/header-credentials.js');
+// Route
+const route = require('../config/main.js').api_route;
 
 
+/*
+ * USE /clients
+ * 
+ * Description: Middleware to handle all /tokens route
+ *
+**/
+const authorizeUser = {
+	method: 'use',
+	route: route.clients,
 
+	//command: asyncWrapper(OAuth2.token)
+	command: [
+		// Store the encoded credentials in res.locals.encodedCredentials
+		HeaderCredentials.extract,
+		asyncWrapper(function *(req, res, next) {
+			// extract access token
 
+			const accessToken = res.locals.encodedCredentials;
 
+			try {
+				const decoded = yield jwtToken.verify(accessToken);
+				if (decoded && decoded.user_id) {
+
+					req.user = {
+						id: decoded.user_id,
+						grantType: 'validated',
+					}
+					return next();
+				}
+			} catch(err) {
+				console.log(err)
+			}
+		})
+	]
+}
 // Apis
 
 const getClients = {
 	method: 'get',
-	route: '/api/clients',
+	route: route.clients,
 	command(req, res, next) {
 		Client.get({
 			limit: 10,
 			offset: 0,
 		}).then((results) => {
+			console.log(results)
 
 			res.status(HttpStatus.OK).json({
 				success: true,
@@ -37,24 +82,26 @@ const getClients = {
 
 const createClient = {
 	method: 'post',
-	route: '/api/clients',
+	route: route.clients,
 	command(req, res, next) {
-		Client.create(req.body)
+		const param = Object.assign(req.body, req.user || {});
+		console.log(param)
+		Client.create(param)
 		.then((results) => {
-			res.status(HttpStatus.CREATED).json({
+			return res.status(HttpStatus.CREATED).json({
 				success: true,
 				results: results
 			});
 		}).catch((err) => {
+			console.log(err)
 
-			res.status(HttpStatus.BAD_REQUEST).json({
+			return res.status(HttpStatus.BAD_REQUEST).json({
 				success: false,
 				error_code: HttpStatus.BAD_REQUEST,
 				error_type: HttpStatus.getStatusText(HttpStatus.BAD_REQUEST),
 				error_message: err.message,
 				error_name: err.name,
 				err: err
-
 			});
 		})
 	},
@@ -62,7 +109,7 @@ const createClient = {
 
 const getClientById = {
 	method: 'get',
-	route: '/api/clients/:id',
+	route: route.clients_id,
 	command(req, res, next) {
 		Client.getById({
 			id: req.params.id
@@ -79,7 +126,7 @@ const getClientById = {
 
 const deleteClient = {
 	method: 'delete',
-	route: '/api/clients/:id',
+	route: route.clients_id,
 	command(req, res, next) {
 		Client.remove({
 			id: req.params.id.toString()
@@ -89,17 +136,28 @@ const deleteClient = {
 				results: results
 			});
 		}).catch((err) => {
+			console.log(err)
 			next(err);
 		});
 	}
 }
 
+const removeAll = {
+	method: 'delete',
+	route: route.clients,
+	command(req, res, next) {
+		return Client.remove({});
+	}
+}
+
 
 module.exports = [
+	//authorizeUser,
 	getClients,
 	getClientById,
 	createClient,
-	deleteClient
+	deleteClient,
+	removeAll
 ]
 
 

@@ -1,16 +1,21 @@
 
 
 
-	const getHomeView = {
-		method: 'get',
-		route: '/',
-		command(req, res, next) {
+const HeaderCredentials = require('../middleware/header-credentials.js');
+
+const getHomeView = {
+	method: 'get',
+	route: '/',
+	command: [
+		HeaderCredentials.include,
+		function renderPage(req, res, next) {
 			res.render('home');
 		}
-	}
-
-	
-
-	module.exports = [
-		getHomeView
 	]
+}
+
+
+
+module.exports = [
+	getHomeView
+]

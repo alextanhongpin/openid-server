@@ -6,6 +6,7 @@ module.exports = app => {
 
 
 	[ 
+		require('./authorize.js'),
 		require('./client.js'),
 		require('./token.js'),
 	].map((actions) => {
